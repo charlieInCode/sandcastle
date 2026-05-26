@@ -1,7 +1,7 @@
 import { Effect, Option } from "effect";
 import { FileSystem } from "@effect/platform";
 import { execFile } from "node:child_process";
-import { join } from "node:path";
+import { join, normalize } from "node:path";
 import { WorktreeError, WorktreeTimeoutError, withTimeout } from "./errors.js";
 
 const WORKTREE_TIMEOUT_MS = 30_000;
@@ -115,6 +115,49 @@ const listWorktrees = (
   );
 
 /**
+ * Normalize path separators to forward slashes so paths from different sources
+ * compare equal. `git worktree list` reports paths with `/` even on Windows,
+ * while `node:path.join` uses the platform separator (`\` on Windows). Without
+ * this, collision detection and orphan pruning silently break on Windows.
+ */
+const normalizePath = (p: string): string => p.replace(/\\/g, "/");
+
+/**
+ * Finds an existing worktree that collides with the target `branch` or
+ * `worktreePath`. Matches by branch first, then falls back to a path match
+ * (covers mid-rebase detached-HEAD state where the branch field is null).
+ */
+export const findCollision = (
+  existing: WorktreeEntry[],
+  branch: string,
+  worktreePath: string,
+): WorktreeEntry | undefined =>
+  existing.find((wt) => wt.branch === branch) ??
+  existing.find((wt) => normalizePath(wt.path) === normalizePath(worktreePath));
+
+/**
+ * Returns true if `worktreePath` is under the sandcastle-managed worktrees
+ * directory — a worktree Sandcastle created and may reuse, as opposed to the
+ * main working tree or an external worktree.
+ */
+export const isManagedWorktree = (
+  worktreePath: string,
+  worktreesDir: string,
+): boolean =>
+  normalizePath(worktreePath).startsWith(normalizePath(worktreesDir));
+
+/**
+ * Returns true if `entryPath` matches one of the active worktree paths git
+ * reported. Used to decide whether a directory under `.sandcastle/worktrees/`
+ * is orphaned and safe to remove. `activeWorktreePaths` is expected to hold
+ * separator-normalized paths (see {@link normalizePath}).
+ */
+export const isActiveWorktree = (
+  entryPath: string,
+  activeWorktreePaths: ReadonlySet<string>,
+): boolean => activeWorktreePaths.has(normalizePath(entryPath));
+
+/**
  * Creates a git worktree at `.sandcastle/worktrees/<name>/`.
  *
  * - If `branch` is specified, checks out that branch.
@@ -170,13 +213,10 @@ export const create = (
       // Match by branch first; fall back to target path (covers mid-rebase
       // detached-HEAD state where the branch field is null).
       const existing = yield* listWorktrees(repoDir);
-      const collision =
-        existing.find((wt) => wt.branch === branch) ??
-        existing.find((wt) => wt.path === worktreePath);
+      const collision = findCollision(existing, branch, worktreePath);
       if (collision) {
         // Only reuse worktrees managed by sandcastle (under .sandcastle/worktrees/)
-        const isManagedWorktree = collision.path.startsWith(worktreesDir);
-        if (isManagedWorktree) {
+        if (isManagedWorktree(collision.path, worktreesDir)) {
           const dirty = yield* hasUncommittedChanges(collision.path);
           if (dirty) {
             console.warn(
@@ -187,7 +227,9 @@ export const create = (
               `Reusing existing worktree at ${collision.path} (branch '${branch}')`,
             );
           }
-          return { path: collision.path, branch };
+          // Return a platform-native path so it matches the separator used by
+          // the non-reuse branch (join), keeping downstream path ops consistent.
+          return { path: normalize(collision.path), branch };
         }
         // Branch is checked out in the main working tree or external worktree
         yield* Effect.fail(
@@ -341,7 +383,7 @@ export const pruneStale = (
       worktreeList
         .split("\n")
         .filter((line) => line.startsWith("worktree "))
-        .map((line) => line.slice("worktree ".length).trim()),
+        .map((line) => normalizePath(line.slice("worktree ".length).trim())),
     );
 
     // Remove any directory under .sandcastle/worktrees/ that is not an active worktree
@@ -351,7 +393,7 @@ export const pruneStale = (
         Effect.map((s) => s.type === "Directory"),
         Effect.catchAll(() => Effect.succeed(false)),
       );
-      if (isDir && !activeWorktreePaths.has(entryPath)) {
+      if (isDir && !isActiveWorktree(entryPath, activeWorktreePaths)) {
         yield* fs.remove(entryPath, { recursive: true, force: true }).pipe(
           Effect.mapError(
             (e) =>
