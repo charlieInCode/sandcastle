@@ -131,6 +131,26 @@ describe("noSandbox", () => {
       expect(result.stdout).toContain("line-5000");
     });
 
+    it("bounds streamed stderr to the configured tail", async () => {
+      const provider = noSandbox({ maxOutputTailChars: 100 });
+      const handle = await provider.create({
+        worktreePath: process.cwd(),
+        env: {},
+      });
+
+      // onLine selects the streaming branch; stderr is accumulated there too.
+      const result = await handle.exec(
+        'for i in $(seq 1 5000); do echo "err-$i" >&2; done',
+        { onLine: () => {} },
+      );
+
+      expect(result.exitCode).toBe(0);
+      // The returned stderr is bounded to the configured tail...
+      expect(result.stderr.length).toBeLessThanOrEqual(100);
+      // ...and it is the tail, so the most recent output is present.
+      expect(result.stderr).toContain("err-5000");
+    });
+
     it("close is a no-op and does not throw", async () => {
       const provider = noSandbox();
       const handle = await provider.create({
