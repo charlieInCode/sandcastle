@@ -129,6 +129,10 @@ jobs:
         if: steps.shape.outputs.proceed == 'true' && steps.preflight.outputs.refused != 'true'
         run: npm ci
 
+      - name: Build
+        if: steps.shape.outputs.proceed == 'true' && steps.preflight.outputs.refused != 'true'
+        run: npm run build
+
       - name: Install Claude Code
         if: steps.shape.outputs.proceed == 'true' && steps.preflight.outputs.refused != 'true'
         run: npm install -g @anthropic-ai/claude-code
