@@ -528,7 +528,7 @@ Commands run **inside the sandbox** after `sandbox.onSandboxReady` hooks complet
 ```markdown
 # Open issues
 
-!`gh issue list --state open --label Sandcastle --json number,title,body,comments,labels --limit 20`
+!`gh issue list --state open --label Sandcastle --json number,title,body,comments,labels --limit 100`
 
 # Recent commits
 
