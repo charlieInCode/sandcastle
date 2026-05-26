@@ -205,6 +205,9 @@ const result = await run({
   // Unset keys keep their defaults.
   timeouts: {
     copyToWorktreeMs: 120_000, // default: 60_000
+    gitSetupMs: 30_000, // default: 10_000
+    commitCollectionMs: 60_000, // default: 30_000
+    mergeToHostMs: 60_000, // default: 30_000
   },
 
   // How to record progress. Default: write to a file under .sandcastle/logs/
@@ -750,7 +753,7 @@ Removes the Podman image.
 | `idleTimeoutSeconds` | number             | `600`                         | Idle timeout in seconds — resets on each agent output event                                                                                                                        |
 | `resumeSession`      | string             | —                             | Resume a prior session by ID for agents that support resume. Incompatible with `maxIterations > 1`. Session file must exist on host.                                               |
 | `signal`             | AbortSignal        | —                             | Cancel the run when aborted. Kills the in-flight agent subprocess and cancels lifecycle hooks; the worktree is preserved on disk. Rejects with `signal.reason`.                    |
-| `timeouts`           | Timeouts           | —                             | Override default timeouts for built-in lifecycle steps. Currently supports `{ copyToWorktreeMs?: number }` (default: 60 000).                                                      |
+| `timeouts`           | Timeouts           | —                             | Override default timeouts for built-in lifecycle steps: `copyToWorktreeMs` (60 000), `gitSetupMs` (10 000), `commitCollectionMs` (30 000), `mergeToHostMs` (30 000).               |
 | `output`             | OutputDefinition   | —                             | Structured output definition (`Output.object(…)` or `Output.string(…)`). Requires `maxIterations === 1`. See [Structured output](#structured-output).                              |
 
 ### `RunResult`

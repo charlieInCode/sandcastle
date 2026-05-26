@@ -393,6 +393,7 @@ export const createWorktree = async (
             branch: worktreeInfo.branch,
             hostWorktreePath: worktreeInfo.path,
             applyToHost,
+            timeouts: options.timeouts,
           },
           (ctx) =>
             Effect.gen(function* () {
@@ -651,6 +652,7 @@ export const createWorktree = async (
           resumeSession: opts.resumeSession,
           signal: opts.signal,
           skipPromptExpansion: isInlinePrompt,
+          timeouts: options.timeouts,
         });
       }).pipe(
         Effect.provide(runLayer),

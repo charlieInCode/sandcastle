@@ -12,6 +12,7 @@ import type { SandboxService } from "./SandboxFactory.js";
 import { SandboxFactory, SANDBOX_REPO_DIR } from "./SandboxFactory.js";
 import { withSandboxLifecycle, type SandboxHooks } from "./SandboxLifecycle.js";
 import type { AgentProvider, IterationUsage } from "./AgentProvider.js";
+import type { Timeouts } from "./run.js";
 import { TextDeltaBuffer } from "./TextDeltaBuffer.js";
 
 export type { ParsedStreamEvent, IterationUsage } from "./AgentProvider.js";
@@ -187,6 +188,8 @@ export interface OrchestrateOptions {
   readonly signal?: AbortSignal;
   /** When true, skip prompt expansion (shell expression evaluation). Set for dynamic inline prompts. */
   readonly skipPromptExpansion?: boolean;
+  /** Override default timeouts for built-in lifecycle steps. Unset keys keep their defaults. */
+  readonly timeouts?: Timeouts;
 }
 
 /** Per-iteration result carrying an optional session ID. */
@@ -264,6 +267,7 @@ export const orchestrate = (
               hostWorktreePath,
               applyToHost,
               signal: options.signal,
+              timeouts: options.timeouts,
             },
             (ctx) =>
               Effect.gen(function* () {

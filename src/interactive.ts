@@ -367,6 +367,7 @@ export const interactive = async (
           branch: lifecycleBranch,
           hostWorktreePath: isHeadMode ? hostRepoDir : worktreeInfo?.path,
           applyToHost,
+          timeouts: options.timeouts,
         },
         (ctx) =>
           Effect.gen(function* () {

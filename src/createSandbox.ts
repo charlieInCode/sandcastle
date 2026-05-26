@@ -191,6 +191,7 @@ interface SandboxHandleContext {
     | NoSandboxHandle
     | undefined;
   readonly applyToHost: () => Effect.Effect<void, any>;
+  readonly timeouts?: Timeouts;
 }
 
 /**
@@ -211,6 +212,7 @@ const buildSandboxHandle = (
     sandboxLayer,
     providerHandle,
     applyToHost,
+    timeouts,
   } = ctx;
 
   const sandboxHandle: Sandbox = {
@@ -334,6 +336,7 @@ const buildSandboxHandle = (
               name: runOptions.name,
               signal: runOptions.signal,
               skipPromptExpansion: isInlinePrompt,
+              timeouts,
             });
           }).pipe(Effect.provide(runLayer)),
         );
@@ -416,6 +419,7 @@ const buildSandboxHandle = (
                 branch,
                 hostWorktreePath: worktreePath,
                 applyToHost,
+                timeouts,
               },
               (ctx) =>
                 Effect.gen(function* () {
@@ -665,6 +669,7 @@ export const createSandboxFromWorktree = async (
       sandboxLayer,
       providerHandle,
       applyToHost,
+      timeouts: options.timeouts,
     },
     async () => {
       if (closed) return { preservedWorktreePath: undefined };
@@ -908,6 +913,7 @@ export const createSandbox = async (
       sandboxLayer,
       providerHandle,
       applyToHost,
+      timeouts: options.timeouts,
     },
     async () => {
       process.removeListener("SIGINT", onSignal);

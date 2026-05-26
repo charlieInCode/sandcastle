@@ -199,6 +199,12 @@ export type LoggingOption =
 export interface Timeouts {
   /** Timeout (ms) for the host-side copy of `copyToWorktree` paths into the worktree. Default: 60_000. */
   readonly copyToWorktreeMs?: number;
+  /** Timeout (ms) for each in-sandbox git setup command (safe.directory, user.name/email, branch discovery). Default: 10_000. */
+  readonly gitSetupMs?: number;
+  /** Timeout (ms) for collecting the commits produced during the run. Default: 30_000. */
+  readonly commitCollectionMs?: number;
+  /** Timeout (ms) for merging the temp branch back to the host branch (merge-to-head strategy). Default: 30_000. */
+  readonly mergeToHostMs?: number;
 }
 
 export interface RunOptions<A extends AgentProvider = AgentProvider> {
@@ -566,6 +572,7 @@ export async function run(
       resumeSession: options.resumeSession,
       signal: options.signal,
       skipPromptExpansion: isInlinePrompt,
+      timeouts: options.timeouts,
     });
 
     const completion = buildCompletionMessage(
